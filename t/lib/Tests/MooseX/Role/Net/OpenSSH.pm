@@ -47,15 +47,16 @@ sub setup : Tests(setup) {
     $self->SUPER::setup;
 }
 
-sub theo : Tests {
+sub basic_test : Tests {
     my $self = shift;
-
-    ok 1;
 
     my $thing = Tests::MooseX::Role::Net::OpenSSH::DummyThing->new;
 
-    warn Dumper $thing;
-    $thing->get_uptime;
+    ok $thing->can( '_build_ssh' ), 'can _build_ssh';
+    ok $thing->can( 'ssh' ), 'can ssh';
+
+    #warn Dumper $thing;
+    #$thing->get_uptime;
 
 }
 
