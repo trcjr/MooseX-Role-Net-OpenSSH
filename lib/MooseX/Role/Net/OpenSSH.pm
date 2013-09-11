@@ -1,62 +1,39 @@
 package MooseX::Role::Net::OpenSSH;
-use MooseX::Role::Parameterized;
+use Moose::Role;
 use namespace::clean -except => 'meta';
-use MooseX::AttributeShortcuts;
-use MooseX::Types::Moose qw{ Str Bool };
 use Net::OpenSSH;
+use Data::Dumper;
 
+# ABSTRACT: A Moose role that provides a Net::OpenSSH Object
 # VERSION
 
-parameter name => ( is => 'ro', isa => Str, default => 'ssh' );
-
-# traits, if any, for our attributes
-parameter traits => (
-    traits  => [ 'Array' ],
-    is      => 'ro',
-    isa     => 'ArrayRef[Str]',
-    default => sub { [] },
-    handles => { all_traits => 'elements' },
+has 'ssh' => (
+    isa        => 'Net::OpenSSH',
+    is         => 'ro',
+    lazy_build => 1,
 );
 
-role {
-    my $p = shift @_;
+for my $name ( qw/ ssh_hostname ssh_username / ) {
+    my $builder = '_build_' . $name;
+    my $writer  = '_set_' . $name;
+    has $name => (
+        is         => 'ro',
+        isa        => 'Str',
+        builder    => $builder,
+        writer     => $writer,
+        lazy_build => 1,
+    );
+}
 
-    my $name = $p->name;
+has 'ssh_options' => (
+    isa        => 'HashRef',
+    is         => 'ro',
+    lazy_build => 1,
+);
 
-    my $traits = [ Shortcuts, $p->all_traits ];
-    my @defaults = ( traits => $traits, is => 'rw', lazy_build => 1 );
-
-    # generate our attribute & builder names... nicely sequential tho :)
-    my $a = sub { $name . '_' . shift @_ };
-    my $b = sub { '_build_' . $name . '_' . shift @_ };
-
-    if ( $p->login_info ) {
-
-        has $a->( 'username' ) => ( @defaults, isa => Str );
-
-        requires $b->( 'username' );
-    }
-
-    has $a->( 'hostname' ) => ( @defaults, isa => Str );
-
-    # if we have a uri, use it; otherwise require its builder
-    #if ( $p->has_ssh_hostname ) {
-    #    method $b->( 'uri' ) => sub { $p->uri }
-    #} else {
-    #    requires $b->( 'uri' );
-    #}
-
-    has $a->( 'ssh' ) => ( @defaults, isa => 'Net::OpenSSH' );
-
-    my $hostname_method = $a->( 'hostname' );
-
-    # create our RPC::XML::Client appropriately
-    method $b->( 'ssh' ) => sub {
-        my $self = shift @_;
-
-        return Net::OpenSSH->new( $self->$hostname_method, %{ $self->ssh_options } );
-
-    };
-};
+sub _build_ssh {
+    my $self = shift;
+    Net::OpenSSH->new( $self->ssh_hostname, %{ $self->ssh_options } );
+}
 
 1;
